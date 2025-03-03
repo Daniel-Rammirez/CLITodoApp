@@ -7,20 +7,29 @@ import (
 	"encoding/csv"
 	"fmt"
 	"os"
+	"text/tabwriter"
+	"time"
 
 	"github.com/spf13/cobra"
 )
 
+type Task struct {
+	ID          string
+	Description string
+	CreatedAt   string
+	IsComplete  string
+}
+
 // listCmd represents the list command
 var listCmd = &cobra.Command{
 	Use:   "list",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
+	Short: "List tasks that are not completed",
+	Long: `This command is used to print tasks on screen, you have two options,
+print by default all the incomplete tasks, or add a flag -a to print them all. 
 
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+For example:
+CLITodoApp.git list -> will print the default ones or incomplete.
+CLITodoApp.git list -a -> will print all the tasks.`,
 	Run: func(cmd *cobra.Command, args []string) {
 
 		file, err := os.Open("task.csv")
@@ -34,17 +43,85 @@ to quickly create a Cobra application.`,
 		reader := csv.NewReader(file)
 
 		// read all the csv
-		tasks, err := reader.ReadAll()
+		records, err := reader.ReadAll()
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "Error reading CSV file:", err)
 			os.Exit(-1)
 		}
 
-		// print tasks
-		fmt.Println("Tasks: ")
-		for i, task := range tasks {
-			fmt.Printf("%d: %s\n", i+1, task)
+		var tasks []Task
+		for i, record := range records {
+			if i == 0 {
+				continue // skip headers
+			}
+			tasks = append(tasks, Task{
+				ID:          record[0],
+				Description: record[1],
+				CreatedAt:   record[2],
+				IsComplete:  record[3],
+			})
 		}
+
+		// calculate width necessary for each column
+		maxIDWidth := len("ID")
+		maxDescWidth := len("Task")
+		maxCreatedWidth := len("Created")
+		maxDoneWidth := len("Done")
+
+		for _, task := range tasks {
+			if len(task.ID) > maxIDWidth {
+				maxIDWidth = len(task.ID)
+			}
+			if len(task.Description) > maxDescWidth {
+				maxDescWidth = len(task.Description)
+			}
+
+			createdAt, err := time.Parse(time.RFC3339, task.CreatedAt)
+			if err != nil {
+				fmt.Println("Error parsing date:", err)
+				return
+			}
+			created := time.Since(createdAt).Round(time.Minute)
+			createdStr := fmt.Sprintf("%v ago", created)
+
+			if len(createdStr) > maxCreatedWidth {
+				maxCreatedWidth = len(createdStr)
+			}
+			if len(task.IsComplete) > maxDoneWidth {
+				maxDoneWidth = len(task.IsComplete)
+			}
+		}
+
+		// create the tabwriter
+		w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+
+		// print header based on each width
+		fmt.Fprintf(w, "%-*s  %-*s  %-*s  %-*s\n",
+			maxIDWidth, "ID",
+			maxDescWidth, "Task",
+			maxCreatedWidth, "Created",
+			maxDoneWidth, "Done",
+		)
+
+		// print task based on each width
+		for _, task := range tasks {
+			createdAt, err := time.Parse(time.RFC3339, task.CreatedAt)
+			if err != nil {
+				fmt.Println("Error parsing date:", err)
+				return
+			}
+			created := time.Since(createdAt).Round(time.Minute)
+			createdStr := fmt.Sprintf("%v ago", created)
+
+			fmt.Fprintf(w, "%-*s  %-*s  %-*s  %-*s\n",
+				maxIDWidth, task.ID,
+				maxDescWidth, task.Description,
+				maxCreatedWidth, createdStr,
+				maxDoneWidth, task.IsComplete,
+			)
+		}
+
+		w.Flush()
 
 	},
 }
