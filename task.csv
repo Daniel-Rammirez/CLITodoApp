@@ -1,5 +1,5 @@
 ID,Description,CreatedAt,IsComplete
 1,My new task,2025-03-02T16:45:19-05:00,true
-2,Finish this video,2025-03-02T16:45:26-05:00,true
-3,Find a video editor,2025-03-02T16:45:31-05:00,false
+2,Finish this video,2025-03-02T16:45:26-05:00,false
+3,Find a video editor,2025-03-02T16:45:31-05:00,true
 4,Find a video editor to long that maybe is going to pass the column space,2025-03-02T16:45:31-05:00,false

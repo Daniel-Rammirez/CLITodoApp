@@ -29,8 +29,15 @@ print by default all the incomplete tasks, or add a flag -a to print them all.
 
 For example:
 CLITodoApp.git list -> will print the default ones or incomplete.
-CLITodoApp.git list -a -> will print all the tasks.`,
+CLITodoApp.git list -a or --all -> will print all the tasks.`,
 	Run: func(cmd *cobra.Command, args []string) {
+
+		allFlag, err := cmd.Flags().GetBool("all")
+
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
 
 		file, err := os.Open("task.csv")
 
@@ -105,6 +112,9 @@ CLITodoApp.git list -a -> will print all the tasks.`,
 
 		// print task based on each width
 		for _, task := range tasks {
+			if !allFlag && task.IsComplete == "true" {
+				continue
+			}
 			createdAt, err := time.Parse(time.RFC3339, task.CreatedAt)
 			if err != nil {
 				fmt.Println("Error parsing date:", err)
@@ -133,7 +143,7 @@ func init() {
 
 	// Cobra supports Persistent Flags which will work for this command
 	// and all subcommands, e.g.:
-	// listCmd.PersistentFlags().String("foo", "", "A help for foo")
+	listCmd.PersistentFlags().BoolP("all", "a", false, "flag to show all the tasks, default is false and just show the incomplete ones")
 
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:

@@ -7,6 +7,8 @@ import (
 	"encoding/csv"
 	"fmt"
 	"os"
+	"strconv"
+	"time"
 
 	"github.com/spf13/cobra"
 )
@@ -27,10 +29,10 @@ to quickly create a Cobra application.`,
 			fmt.Fprintln(os.Stderr, "You need to pass a task")
 			os.Exit(-1)
 		}
-		newTask := args[0]
+		newTaskDescription := args[0]
 
 		// Open CSV file
-		file, err := os.OpenFile("task.csv", os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
+		file, err := os.OpenFile("task.csv", os.O_RDWR|os.O_CREATE, 0644)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(-1)
@@ -41,14 +43,42 @@ to quickly create a Cobra application.`,
 		writer := csv.NewWriter(file)
 		defer writer.Flush()
 
+		reader := csv.NewReader(file)
+		lines, _ := reader.ReadAll()
+
+		// fmt.Println("lastLine: ", lines)
+		// read the last line of the file to know the number list and add the new one
+		lastLine := lines[len(lines)-1]
+		lastIDCreated, _ := strconv.Atoi(lastLine[0])
+		newID := lastIDCreated + 1
+
+		// obtain the current time to add in the task
+		currentTimeFormatted := fmt.Sprint(time.Now().UTC().Format(time.RFC3339))
+
+		var newTask = Task{
+			ID:          strconv.Itoa(newID),
+			Description: newTaskDescription,
+			CreatedAt:   currentTimeFormatted,
+			IsComplete:  "false",
+		}
+
 		// write records
-		err = writer.Write([]string{newTask})
+		err = writer.Write(taskToStrings(newTask))
 		if err != nil {
 			panic(err)
 		}
 
 		fmt.Println("task crated!")
 	},
+}
+
+func taskToStrings(t Task) []string {
+	return []string{
+		t.ID,
+		t.Description,
+		t.CreatedAt,
+		t.IsComplete,
+	}
 }
 
 func init() {
